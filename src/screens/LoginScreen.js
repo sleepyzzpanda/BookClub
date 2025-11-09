@@ -1,74 +1,89 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
-import { firebase_auth } from "../utils/firebase-config";
-import { Alert } from "react-native";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { firebase_auth, firebase_db } from "../utils/firebase-config"; // add firebase_db (Firestore)
+import { Alert, View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function LoginScreen() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleSignUp = async () => {
-        try{
-            setLoading(true);
-            await createUserWithEmailAndPassword(firebase_auth, email.trim(), password);
-            Alert.alert("User registered successfully!");
-        } catch (e) {
-            Alert.alert("Error registering user:", e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+  // SIGN UP
+  const handleSignUp = async () => {
+    try {
+      setLoading(true);
+      const userCredential = await createUserWithEmailAndPassword(
+        firebase_auth,
+        email.trim(),
+        password
+      );
 
-    // todo: sign in function
-    const handleSignIn = async () => {
-        try{
-            setLoading(true);
-            await signInWithEmailAndPassword(firebase_auth, email.trim(), password);
-            Alert.alert("User signed in successfully!");
-        } catch (e) {
-            Alert.alert("Error signing in user:", e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+      const user = userCredential.user;
 
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>BOOK CLUB</Text>
-            <Text style={styles.subtitle}>~READ YAP REPEAT~</Text>
+      // Save user info to Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        username: "NewUser", // default username
+        createdAt: new Date(),
+      });
 
-            <TextInput
-                placeholder="USERNAME"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                style={styles.input}
-            />
+      Alert.alert("User registered successfully!");
+    } catch (e) {
+      console.error("Sign up error:", e);
+      Alert.alert("Error registering user:", e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            <TextInput
-                placeholder="PASSWORD"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                style={styles.input}
-            />
+  // SIGN IN
+  const handleSignIn = async () => {
+    try {
+      setLoading(true);
+      await signInWithEmailAndPassword(firebase_auth, email.trim(), password);
+      Alert.alert("User signed in successfully!");
+    } catch (e) {
+      console.error("Sign in error:", e);
+      Alert.alert("Error signing in user:", e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={handleSignIn} disabled={loading} style={styles.button}>
-                <Text style={styles.buttonText}>LOGIN</Text>
-            </TouchableOpacity>
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>BOOK CLUB</Text>
+      <Text style={styles.subtitle}>~READ YAP REPEAT~</Text>
 
-            <TouchableOpacity onPress={handleSignUp} disabled={loading} style={styles.button}>
-                <Text style={styles.buttonText}>SIGN UP</Text>
-            </TouchableOpacity>
-            </View>
-        </View>
-    );
+      <TextInput
+        placeholder="EMAIL"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="PASSWORD"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={styles.input}
+      />
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity onPress={handleSignIn} disabled={loading} style={styles.button}>
+          <Text style={styles.buttonText}>LOGIN</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleSignUp} disabled={loading} style={styles.button}>
+          <Text style={styles.buttonText}>SIGN UP</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 }
-
-
 
 const styles = StyleSheet.create({
   container: {

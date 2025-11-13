@@ -1,6 +1,6 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
-import { firebase_auth, firebase_db } from "../utils/firebase-config"; // add firebase_db (Firestore)
+import { firebase_auth, db } from "../utils/firebase-config"; // add firebase_db (Firestore)
 import { Alert, View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -23,9 +23,11 @@ export default function LoginScreen() {
 
       // Save user info to Firestore
       await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        username: "NewUser", // default username
-        createdAt: new Date(),
+        username: email.split("@")[0],
+        booksRead: "0",
+        bookshelves: "0",
+        bookClub: null,
+        recommended: "0",
       });
 
       Alert.alert("User registered successfully!");

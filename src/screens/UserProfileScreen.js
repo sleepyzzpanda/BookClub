@@ -79,7 +79,7 @@ export default function UserProfileScreen() {
     const handleJoinClub = async (clubID, clubName) => {
         try {
             const userRef = doc(db, "users", user.uid);
-            const clubRef = doc(db, "bookclubs", clubId);
+            const clubRef = doc(db, "bookclubs", clubID);
 
             await updateDoc(userRef, { bookClub: clubName });
             await updateDoc(clubRef, { members: arrayUnion(user.uid) });
@@ -145,8 +145,8 @@ export default function UserProfileScreen() {
 
     const openEditModal = () => {
         if (userInfo) {
-        setTempUsername(userInfo.username);
-        setIsModalVisible(true);
+            setTempUsername(userInfo.username);
+            setIsModalVisible(true);
         }
     };
 

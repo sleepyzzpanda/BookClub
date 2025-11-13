@@ -77,6 +77,21 @@ export default function HomeScreen() {
     if (!result.canceled) setImage(result.assets[0].uri);
   };
 
+  // take photo with camera
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Camera access is needed to take photos.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.6,
+    });
+    if (!result.canceled) setImage(result.assets[0].uri);
+  };
+
   // upload post to Firestore (with optional Base64 image)
   const handlePost = async () => {
     if (!newPostText.trim() && !image) {
@@ -106,7 +121,7 @@ export default function HomeScreen() {
       await addDoc(collection(db, "posts"), {
         clubId: userClub,
         userId: user.uid,
-        username: userName,
+        username: userName || "Anonymous",
         text: newPostText.trim(),
         imageBase64, // store Base64 string
         createdAt: serverTimestamp(),
@@ -152,8 +167,13 @@ export default function HomeScreen() {
         {image && <Image source={{ uri: image }} style={styles.preview} />}
         <View style={styles.postButtons}>
           <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-            <Text>📷</Text>
+            <Text>🖼️</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+            <Text>📸</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.postButton}
             onPress={handlePost}

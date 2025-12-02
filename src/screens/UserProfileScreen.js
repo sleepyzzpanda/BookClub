@@ -479,7 +479,6 @@ export default function UserProfileScreen() {
         {/* FAVORITE BOOKS CARD */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>FAVORITE BOOKS</Text>
-
           <FlatList
             data={userInfo.readingLists.favorites}
             horizontal

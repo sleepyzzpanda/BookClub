@@ -44,22 +44,33 @@ export default function HomeScreen() {
   const [userName, setUsername] = useState("");
 
   // fetch user info to get their book club
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserClub(userDoc.data().bookClub);
-          setUsername(userDoc.data().username);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true; // optional safety to prevent state update after unmount
+
+      const fetchUser = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+
+          if (isActive && userDoc.exists()) {
+            setUserClub(userDoc.data().bookClub);
+            setUsername(userDoc.data().username);
+          }
+        } catch (e) {
+          console.error("Error fetching user info:", e);
+        } finally {
+          if (isActive) setLoading(false);
         }
-      } catch (e) {
-        console.error("Error fetching user info:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
+      };
+
+      fetchUser();
+
+      return () => {
+        // cleanup
+        isActive = false;
+      };
+    }, [user.uid]) // dependencies
+  );
 
   // listen for posts in user's book club
   useFocusEffect(

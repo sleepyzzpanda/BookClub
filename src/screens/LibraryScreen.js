@@ -1,3 +1,8 @@
+/*
+Component: LibraryScreen
+Description: Displays the user's personal library with reading lists.
+*/
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import {
@@ -59,67 +64,75 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Your Library</Text>
+      <ScrollView style={styles.container}>
+        <Text style={styles.header}>Your Library</Text>
 
-      {/* FAVORITES */}
-      <View style={styles.shelfCard}>
-        <Text style={styles.sectionTitle}>Favorites</Text>
-        <FlatList
-          data={lists.favorites}
-          horizontal
-          keyExtractor={(item) => item.id}
-          renderItem={renderBook}
-          ListEmptyComponent={<Text style={styles.empty}>No favorites yet.</Text>}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 5 }}
-        />
-      </View>
+        {/* FAVORITES */}
+        <View style={styles.shelfCard}>
+          <Text style={styles.sectionTitle}>Favorites</Text>
+          <FlatList
+            data={lists.favorites}
+            horizontal
+            keyExtractor={(item) => item.id}
+            renderItem={renderBook}
+            ListEmptyComponent={
+              <Text style={styles.empty}>No favorites yet.</Text>
+            }
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 5 }}
+          />
+        </View>
 
-      {/* CURRENTLY READING */}
-      <View style={styles.shelfCard}>
-        <Text style={styles.sectionTitle}>Currently Reading</Text>
-        <FlatList
-          data={lists.currentlyReading}
-          horizontal
-          keyExtractor={(item) => item.id}
-          renderItem={renderBook}
-          ListEmptyComponent={<Text style={styles.empty}>No books here yet.</Text>}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 5 }}
-        />
-      </View>
+        {/* CURRENTLY READING */}
+        <View style={styles.shelfCard}>
+          <Text style={styles.sectionTitle}>Currently Reading</Text>
+          <FlatList
+            data={lists.currentlyReading}
+            horizontal
+            keyExtractor={(item) => item.id}
+            renderItem={renderBook}
+            ListEmptyComponent={
+              <Text style={styles.empty}>No books here yet.</Text>
+            }
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 5 }}
+          />
+        </View>
 
-      {/* WANT TO READ */}
-      <View style={styles.shelfCard}>
-        <Text style={styles.sectionTitle}>Want to Read</Text>
-        <FlatList
-          data={lists.wantToRead}
-          horizontal
-          keyExtractor={(item) => item.id}
-          renderItem={renderBook}
-          ListEmptyComponent={<Text style={styles.empty}>No books here yet.</Text>}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 5 }}
-        />
-      </View>
+        {/* WANT TO READ */}
+        <View style={styles.shelfCard}>
+          <Text style={styles.sectionTitle}>Want to Read</Text>
+          <FlatList
+            data={lists.wantToRead}
+            horizontal
+            keyExtractor={(item) => item.id}
+            renderItem={renderBook}
+            ListEmptyComponent={
+              <Text style={styles.empty}>No books here yet.</Text>
+            }
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 5 }}
+          />
+        </View>
 
-      {/* READ */}
-      <View style={styles.shelfCard}>
-        <Text style={styles.sectionTitle}>Read</Text>
-        <FlatList
-          data={lists.read}
-          horizontal
-          keyExtractor={(item) => item.id}
-          renderItem={renderBook}
-          ListEmptyComponent={<Text style={styles.empty}>No books here yet.</Text>}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 5 }}
-        />
-      </View>
-      {/*this is janky asf pls dont judge this ok but this is basically here so the scrolling can go all the way down </3 */}
-      <View style={{height: 50}}></View>
-    </ScrollView>
+        {/* READ */}
+        <View style={styles.shelfCard}>
+          <Text style={styles.sectionTitle}>Read</Text>
+          <FlatList
+            data={lists.read}
+            horizontal
+            keyExtractor={(item) => item.id}
+            renderItem={renderBook}
+            ListEmptyComponent={
+              <Text style={styles.empty}>No books here yet.</Text>
+            }
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 5 }}
+          />
+        </View>
+        {/*this is janky asf pls dont judge this ok but this is basically here so the scrolling can go all the way down </3 */}
+        <View style={{ height: 50 }}></View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -174,5 +187,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  safeArea: { flex: 1, backgroundColor: "#fff",},
+  safeArea: { flex: 1, backgroundColor: "#fff" },
 });

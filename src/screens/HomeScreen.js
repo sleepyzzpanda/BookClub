@@ -1,4 +1,9 @@
-import React, { useEffect, useState, useCallback} from "react";
+/*
+Component: HomeScreen
+Description: Displays the home feed for the user's book club, allowing posting and viewing posts.
+*/
+
+import React, { useEffect, useState, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -50,7 +55,7 @@ export default function HomeScreen() {
       } catch (e) {
         console.error("Error fetching user info:", e);
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
     fetchUser();
@@ -77,7 +82,6 @@ export default function HomeScreen() {
     }, [userClub])
   );
 
-
   // pick image from gallery
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -92,13 +96,16 @@ export default function HomeScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission required", "Camera access is needed to take photos.");
+      Alert.alert(
+        "Permission required",
+        "Camera access is needed to take photos."
+      );
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      quality: 0.6,
+      quality: 0.6, // reduce quality for faster upload
     });
     if (!result.canceled) setImage(result.assets[0].uri);
   };
@@ -120,12 +127,13 @@ export default function HomeScreen() {
         const blob = await response.blob();
 
         const reader = new FileReader();
+        // Create a promise to handle async reading
         const base64Promise = new Promise((resolve, reject) => {
           reader.onloadend = () => resolve(reader.result);
           reader.onerror = reject;
         });
-        reader.readAsDataURL(blob);
-        imageBase64 = await base64Promise;
+        reader.readAsDataURL(blob); // Read blob as Base64
+        imageBase64 = await base64Promise; // Wait for Base64 string
       }
 
       // Save post directly to Firestore
@@ -148,6 +156,7 @@ export default function HomeScreen() {
     }
   };
 
+  // Loading state (spinning wheel of death)
   if (loading) {
     return (
       <View style={styles.center}>
@@ -156,10 +165,13 @@ export default function HomeScreen() {
     );
   }
 
+  // check if user is in a book club
   if (!userClub) {
     return (
       <View style={styles.center}>
-        <Text style={{ textAlign: "center" }}>Join a book club to see posts!</Text>
+        <Text style={{ textAlign: "center" }}>
+          Join a book club to see posts!
+        </Text>
       </View>
     );
   }
@@ -229,7 +241,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff"},
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, backgroundColor: "#fff", padding: 15 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   postBox: {

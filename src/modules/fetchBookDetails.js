@@ -1,3 +1,7 @@
+/*
+Component: fetchBookDetails
+Description: Fetches book details from Google Books API based on the provided title.
+*/
 export const fetchBookDetails = async (title) => {
     try {
         const query = encodeURIComponent(title);

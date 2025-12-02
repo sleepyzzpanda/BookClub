@@ -1,3 +1,8 @@
+/*
+Component: generateUserStats
+Description: Generates user reading statistics based on a list of read books.
+*/
+
 import { fetchBookDetails } from "./fetchBookDetails";
 
 export const generateUserStats = async (readBooks) => {

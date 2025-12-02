@@ -1,4 +1,7 @@
-// src/navigation/AuthNavigator.js
+/*
+Component: AuthNavigator
+Description: Handles authentication flow, switching between login and main app navigation.
+*/
 import React, { useState, useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { onAuthStateChanged } from "firebase/auth";

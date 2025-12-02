@@ -1,4 +1,7 @@
-// src/navigation/AppNavigator.js
+/*
+Component: AppNavigator
+Description: Sets up the bottom tab navigation for the app.
+*/
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";

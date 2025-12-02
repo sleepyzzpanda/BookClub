@@ -1,7 +1,22 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+/*
+Component: LoginScreen
+Description: Handles user login and registration.
+*/
+
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { useState } from "react";
 import { firebase_auth, db } from "../utils/firebase-config"; // add firebase_db (Firestore)
-import { Alert, View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  Alert,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { doc, setDoc } from "firebase/firestore";
 
 export default function LoginScreen() {
@@ -36,7 +51,7 @@ export default function LoginScreen() {
           wantToRead: [],
           currentlyReading: [],
           favorites: [],
-        }
+        },
       });
 
       Alert.alert("User registered successfully!");
@@ -47,7 +62,6 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
-
 
   // SIGN IN
   const handleSignIn = async () => {
@@ -85,11 +99,19 @@ export default function LoginScreen() {
       />
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity onPress={handleSignIn} disabled={loading} style={styles.button}>
+        <TouchableOpacity
+          onPress={handleSignIn}
+          disabled={loading}
+          style={styles.button}
+        >
           <Text style={styles.buttonText}>LOGIN</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleSignUp} disabled={loading} style={styles.button}>
+        <TouchableOpacity
+          onPress={handleSignUp}
+          disabled={loading}
+          style={styles.button}
+        >
           <Text style={styles.buttonText}>SIGN UP</Text>
         </TouchableOpacity>
       </View>

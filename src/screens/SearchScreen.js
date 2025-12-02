@@ -1,3 +1,8 @@
+/*
+Component: SearchScreen
+Description: Allows users to search for books and add them to their reading lists.
+*/
+
 import React, { useState } from "react";
 import {
   View,
@@ -88,7 +93,11 @@ export default function SearchScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#000" style={{ marginTop: 20 }} />
+        <ActivityIndicator
+          size="large"
+          color="#000"
+          style={{ marginTop: 20 }}
+        />
       ) : (
         <FlatList
           data={results}
@@ -140,7 +149,6 @@ export default function SearchScreen() {
                 {/* Dropdown Menu */}
                 {openDropdown === item.id && (
                   <View style={styles.dropdownMenu}>
-
                     <TouchableOpacity
                       onPress={() => {
                         addToList(item, "favorites");
@@ -165,7 +173,9 @@ export default function SearchScreen() {
                         setOpenDropdown(null);
                       }}
                     >
-                      <Text style={styles.dropdownOption}>Currently Reading</Text>
+                      <Text style={styles.dropdownOption}>
+                        Currently Reading
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -176,10 +186,8 @@ export default function SearchScreen() {
                     >
                       <Text style={styles.dropdownOption}>Read</Text>
                     </TouchableOpacity>
-
                   </View>
                 )}
-
               </View>
             );
           }}

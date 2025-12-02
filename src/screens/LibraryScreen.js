@@ -12,6 +12,7 @@ import {
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../utils/firebase-config";
 import { getAuth } from "firebase/auth";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LibraryScreen() {
   const auth = getAuth();
@@ -57,6 +58,7 @@ export default function LibraryScreen() {
   }
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <ScrollView style={styles.container}>
       <Text style={styles.header}>Your Library</Text>
 
@@ -118,13 +120,14 @@ export default function LibraryScreen() {
       {/*this is janky asf pls dont judge this ok but this is basically here so the scrolling can go all the way down </3 */}
       <View style={{height: 50}}></View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
+    paddingTop: 15,
     paddingHorizontal: 15,
     backgroundColor: "#f0f0f0",
   },
@@ -171,4 +174,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  safeArea: { flex: 1, backgroundColor: "#fff",},
 });

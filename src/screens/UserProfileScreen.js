@@ -8,7 +8,8 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  ScrollView
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ProgressBar } from "react-native-paper";
@@ -16,7 +17,8 @@ import { db } from "../utils/firebase-config";
 import { doc, getDoc, setDoc, updateDoc, addDoc, getDocs, collection, arrayUnion, arrayRemove } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import * as ImagePicker from "expo-image-picker";
-
+import { SafeAreaView } from "react-native-safe-area-context";
+import { generateUserStats } from "../modules/generateUserStats";
 
 export default function UserProfileScreen() {
     const auth = getAuth();
@@ -32,6 +34,40 @@ export default function UserProfileScreen() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newClubName, setNewClubName] = useState("");
     const [newClubDesc, setNewClubDesc] = useState("");
+    const [stats, setStats] = useState(null);
+
+    
+    const updateUserStats = async (data) => {
+        if (!userID || !data?.readingLists) return;
+
+        const booksReadCount = data.readingLists.read?.length || 0;
+        const bookshelvesCount = Object.keys(data.readingLists).length;
+
+        // Only update Firestore if values changed
+        if (
+            data.booksRead !== booksReadCount ||
+            data.bookshelves !== bookshelvesCount
+        ) {
+            try {
+                const userRef = doc(db, "users", userID);
+                await updateDoc(userRef, {
+                    booksRead: booksReadCount,
+                    bookshelves: bookshelvesCount,
+                });
+
+                // update UI
+                setUserInfo((prev) => ({
+                    ...prev,
+                    booksRead: booksReadCount,
+                    bookshelves: bookshelvesCount,
+                }));
+            } catch (e) {
+                console.error("Error updating stats:", e);
+            }
+        }
+    };
+
+    
 
     // fetch user info from firestore when screen loads
     useEffect(() => {
@@ -41,17 +77,21 @@ export default function UserProfileScreen() {
             const docRef = doc(db, "users", userID);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-            setUserInfo(docSnap.data());
+                const data = docSnap.data();
+                setUserInfo(data);
+
+                // Update booksRead + bookshelves
+                updateUserStats(data);
             } else {
-            const defaultData = {
-                username: "malicious-duck",
-                booksRead: "0",
-                bookshelves: "0",
-                bookClub: null,
-                recommended: "0",
-            };
-            await setDoc(docRef, defaultData);
-            setUserInfo(defaultData);
+                const defaultData = {
+                    username: "malicious-duck",
+                    booksRead: "0",
+                    bookshelves: "0",
+                    bookClub: null,
+                    recommended: "0",
+                };
+                await setDoc(docRef, defaultData);
+                setUserInfo(defaultData);
             }
         } catch (error) {
             console.error("Error loading user: ", error);
@@ -76,6 +116,19 @@ export default function UserProfileScreen() {
         };
         fetchBookClubs();
     }, []);
+
+    // generate reading stats whenever userInfo loads or updates
+    useEffect(() => {
+        const loadStats = async () => {
+            if (!userInfo || !userInfo.readingLists) return;
+
+            const stats = await generateUserStats(userInfo.readingLists.read || []);
+            // console.log("Generated stats:", stats); // debug line
+            setStats(stats);
+        };
+
+        loadStats();
+    }, [userInfo]);
 
     // join a club
     const handleJoinClub = async (clubID, clubName) => {
@@ -218,7 +271,9 @@ export default function UserProfileScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        
         {/* USER INFO */}
         <View style={styles.profileSection}>
             <Image
@@ -259,7 +314,7 @@ export default function UserProfileScreen() {
             <View style={styles.cardContent}>
             {userInfo.bookClub ? (
                 <>
-                <View style={styles.cardCotainer}>
+                <View style={styles.cardContainer}>
                     <Text style={styles.clubText}>You are in: {userInfo.bookClub}</Text>
                     <TouchableOpacity
                         style={[styles.button, { backgroundColor: "#ff6961" }]}
@@ -335,10 +390,49 @@ export default function UserProfileScreen() {
         {/* READING STATS CARD */}
         <View style={styles.card}>
             <Text style={styles.cardTitle}>READING STATS</Text>
+            
             <View style={styles.cardContent}>
-            <ProgressBar progress={0.8} color="#00A676" style={styles.progressBar} />
+                {stats ? (
+                    <View>
+
+                        {/* TOTAL BOOKS */}
+                        <Text style={styles.statText}>
+                            Total Books Read: <Text style={styles.statValue}>{stats.totalBooksRead}</Text>
+                        </Text>
+
+                        {/* TOTAL PAGES */}
+                        <Text style={styles.statText}>
+                            Total Pages Read: <Text style={styles.statValue}>{stats.totalPagesRead}</Text>
+                        </Text>
+
+                        {/* AVG LENGTH */}
+                        <Text style={styles.statText}>
+                            Average Book Length: <Text style={styles.statValue}>{stats.averageBookLength} pages</Text>
+                        </Text>
+
+                        {/* TOP GENRES */}
+                        <Text style={[styles.statText, { marginTop: 10 }]}>
+                            Top Genres:
+                        </Text>
+
+                        {stats.topGenres.length > 0 ? (
+                            stats.topGenres.slice(0, 3).map((genre, index) => (
+                                <Text key={index} style={styles.genreItem}>
+                                    {index + 1}. {genre}
+                                </Text>
+                            ))
+                        ) : (
+                            <Text style={styles.genreItem}>No genres found</Text>
+                        )}
+
+
+                    </View>
+                ) : (
+                    <Text style={styles.statText}>Loading stats...</Text>
+                )}
             </View>
         </View>
+
 
         {/* FAVORITE BOOKS CARD */}
         <View style={styles.card}>
@@ -387,137 +481,158 @@ export default function UserProfileScreen() {
             </View>
             </View>
         </Modal>
-        </View>
+       
+        </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "90%",
-    marginBottom: 15,
-  },
-  cardContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#f0f0f0", // light gray background to make cards pop
-    paddingTop: 40,
-    alignItems: "center",
-  },
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    width: "90%",
-  },
-  profileImage: { width: 80, height: 80, borderRadius: 10, marginRight: 15 },
-  userInfo: { flexShrink: 1 },
-  username: { fontWeight: "700", fontSize: 16 },
-  statsText: { fontSize: 12, color: "#333" },
-  editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#00A676",
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 6,
-    marginBottom: 15,
-  },
-  editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
+    scrollContent: {
+        alignItems: "center",
+        paddingBottom: 40,
+        paddingTop: 15,
+    },
+    buttonContainer: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        width: "90%",
+        marginBottom: 15,
+    },
+    cardContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    container: {
+        flex: 1,
+        backgroundColor: "#f0f0f0",
+        paddingTop: 15,
+    },
+    profileSection: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 20,
+        width: "90%",
+    },
+    profileImage: { width: 80, height: 80, borderRadius: 10, marginRight: 15 },
+    userInfo: { flexShrink: 1 },
+    username: { fontWeight: "700", fontSize: 16 },
+    statsText: { fontSize: 12, color: "#333" },
+    editButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#00A676",
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 6,
+        marginBottom: 15,
+    },
+    editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
 
-  // Card style for shelves
-  card: {
-    backgroundColor: "#fff",
-    width: "90%",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3, // Android shadow
-  },
-  cardTitle: {
-    fontWeight: "700",
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  cardContent: {
-    paddingVertical: 5,
-  },
+    // Card style for shelves
+    card: {
+        backgroundColor: "#fff",
+        width: "90%",
+        borderRadius: 12,
+        padding: 15,
+        marginBottom: 20,
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    cardTitle: {
+        fontWeight: "700",
+        fontSize: 16,
+        marginBottom: 10,
+    },
+    cardContent: {
+        paddingVertical: 5,
+    },
 
-  // Horizontal book item
-  bookItem: {
-    marginRight: 10,
-    alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 5,
-  },
-  thumbnail: {
-    width: 80,
-    height: 120,
-    borderRadius: 6,
-    backgroundColor: "#ddd",
-  },
-  bookTitle: {
-    fontSize: 12,
-    width: 80,
-    textAlign: "center",
-    marginTop: 5,
-  },
-  empty: {
-    color: "#777",
-    fontStyle: "italic",
-    paddingVertical: 10,
-  },
+    // Horizontal book item
+    bookItem: {
+        marginRight: 10,
+        alignItems: "center",
+        backgroundColor: "#f9f9f9",
+        borderRadius: 8,
+        padding: 5,
+    },
+    thumbnail: {
+        width: 80,
+        height: 120,
+        borderRadius: 6,
+        backgroundColor: "#ddd",
+    },
+    bookTitle: {
+        fontSize: 12,
+        width: 80,
+        textAlign: "center",
+        marginTop: 5,
+    },
+    empty: {
+        color: "#777",
+        fontStyle: "italic",
+        paddingVertical: 10,
+    },
 
-  clubCard: {
-    backgroundColor: "#fff",
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 8,
-  },
-  clubName: { fontWeight: "700", fontSize: 14 },
-  clubDesc: { fontSize: 12, color: "#555" },
-  clubText: { marginBottom: 10, fontSize: 13, color: "#333" },
+    clubCard: {
+        backgroundColor: "#fff",
+        borderRadius: 6,
+        padding: 10,
+        marginBottom: 8,
+    },
+    clubName: { fontWeight: "700", fontSize: 14 },
+    clubDesc: { fontSize: 12, color: "#555" },
+    clubText: { marginBottom: 10, fontSize: 13, color: "#333" },
 
-  button: {
-    alignSelf: "flex-start",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    backgroundColor: "#00A676",
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
+    button: {
+        alignSelf: "flex-start",
+        paddingVertical: 6,
+        paddingHorizontal: 14,
+        borderRadius: 6,
+        backgroundColor: "#00A676",
+    },
+    buttonText: { color: "#fff", fontWeight: "600" },
 
-  progressBar: { height: 10, borderRadius: 5, marginBottom: 5 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: { backgroundColor: "#fff", width: "85%", borderRadius: 10, padding: 20, elevation: 5 },
-  modalBox: {
-    backgroundColor: "#fff",
-    width: "85%",
-    borderRadius: 10,
-    padding: 20,
-    alignItems: "center",
-  },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, textAlign: "center" },
-  input: { borderBottomWidth: 1, borderColor: "#ccc", marginBottom: 10, fontSize: 14, paddingVertical: 4 },
-  modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 15 },
-  saveButton: { backgroundColor: "#00A676", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6 },
-  cancelButton: { backgroundColor: "#ccc", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6 },
-  saveText: { color: "#fff", fontWeight: "600" },
-  cancelText: { color: "#333", fontWeight: "600" },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    progressBar: { height: 10, borderRadius: 5, marginBottom: 5 },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: { backgroundColor: "#fff", width: "85%", borderRadius: 10, padding: 20, elevation: 5 },
+    modalBox: {
+        backgroundColor: "#fff",
+        width: "85%",
+        borderRadius: 10,
+        padding: 20,
+        alignItems: "center",
+    },
+    modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, textAlign: "center" },
+    input: { borderBottomWidth: 1, borderColor: "#ccc", marginBottom: 10, fontSize: 14, paddingVertical: 4 },
+    modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 15 },
+    saveButton: { backgroundColor: "#00A676", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6 },
+    cancelButton: { backgroundColor: "#ccc", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6 },
+    saveText: { color: "#fff", fontWeight: "600" },
+    cancelText: { color: "#333", fontWeight: "600" },
+    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    safeArea: { flex: 1, backgroundColor: "#fff",},
+    statText: {
+        fontSize: 13,
+        marginBottom: 4,
+        color: "#333",
+    },
+    statValue: {
+        fontWeight: "700",
+        color: "#00A676",
+    },
+    genreItem: {
+        fontSize: 12,
+        marginLeft: 10,
+        color: "#444",
+    },
 });
 

@@ -21,14 +21,17 @@ import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 export default function SearchScreen() {
+  // State variables
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
 
+  // user auth info
   const auth = getAuth();
   const user = auth.currentUser;
 
+  // Search books from Google Books API
   const handleSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
@@ -52,15 +55,17 @@ export default function SearchScreen() {
     try {
       const userRef = doc(db, "users", user.uid);
 
+      // Clean book data
       const cleanedBook = {
         id: book.id,
         title: book.volumeInfo.title || "Untitled",
         authors: book.volumeInfo.authors || [],
         thumbnail:
           book.volumeInfo.imageLinks?.thumbnail ||
-          "https://via.placeholder.com/120x160?text=No+Image",
+          "https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg",
       };
 
+      // Update Firestore document
       await updateDoc(userRef, {
         [`readingLists.${listName}`]: arrayUnion(cleanedBook),
       });

@@ -15,6 +15,8 @@ import { ProgressBar } from "react-native-paper";
 import { db } from "../utils/firebase-config";
 import { doc, getDoc, setDoc, updateDoc, addDoc, getDocs, collection, arrayUnion, arrayRemove } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import * as ImagePicker from "expo-image-picker";
+
 
 export default function UserProfileScreen() {
     const auth = getAuth();
@@ -165,6 +167,40 @@ export default function UserProfileScreen() {
         setIsModalVisible(false);
     };
 
+    // profile pic stuff ----------------------------------
+    const pickImageAndUpload = async () => {
+        try {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permission.granted) {
+                alert("Permission required to choose a profile picture.");
+                return;
+            }
+
+                // Pick image with Base64 encoding enabled
+                const result = await ImagePicker.launchImageLibraryAsync({
+                base64: true,
+                allowsEditing: true,
+                quality: 0.4,  // compress to avoid >1MB
+            });
+
+            if (result.canceled) return;
+
+            const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+
+            // Save directly to Firestore
+            const userRef = doc(db, "users", userID);
+            await updateDoc(userRef, {
+            profilePicture: base64Image,
+            });
+
+            // Update UI state
+            setUserInfo((prev) => ({ ...prev, profilePicture: base64Image }));
+        } catch (error) {
+            console.error("Error uploading Base64 image:", error);
+        }
+    };
+
+
     if (loading) {
         return (
         <View style={styles.loadingContainer}>
@@ -186,11 +222,13 @@ export default function UserProfileScreen() {
         {/* USER INFO */}
         <View style={styles.profileSection}>
             <Image
-            source={{
-                uri: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-            }}
-            style={styles.profileImage}
+                source={{
+                    uri: userInfo?.profilePicture ||
+                    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
+                }}
+                style={styles.profileImage}
             />
+
             <View style={styles.userInfo}>
             <Text style={styles.username}>{userInfo.username}</Text>
             <Text style={styles.statsText}>Books Read: {userInfo.booksRead}</Text>
@@ -200,11 +238,20 @@ export default function UserProfileScreen() {
             </View>
         </View>
 
-        {/* EDIT BUTTON */}
-        <TouchableOpacity style={styles.editButton} onPress={openEditModal}>
-            <Ionicons name="create-outline" size={20} color="#fff" />
-            <Text style={styles.editButtonText}>Edit Username</Text>
-        </TouchableOpacity>
+        <View style = {styles.buttonContainer}> 
+            {/* EDIT USERNAME BUTTON */}
+            <TouchableOpacity style={styles.editButton} onPress={openEditModal}>
+                <Ionicons name="create-outline" size={20} color="#fff" />
+                <Text style={styles.editButtonText}>Edit Username</Text>
+            </TouchableOpacity>
+
+            {/* CHANGE PROFILE PICTURE BUTTON */}
+            <TouchableOpacity style={styles.editButton} onPress={pickImageAndUpload}>
+                <Ionicons name = "image-outline" size={20} color="#fff" />
+                <Text style={styles.editButtonText}>Change Profile Picture</Text>
+            </TouchableOpacity>
+        </View>
+
 
         {/* JOIN / CREATE CLUB CARD */}
         <View style={styles.card}>
@@ -212,13 +259,15 @@ export default function UserProfileScreen() {
             <View style={styles.cardContent}>
             {userInfo.bookClub ? (
                 <>
-                <Text style={styles.clubText}>You are in: {userInfo.bookClub}</Text>
-                <TouchableOpacity
-                    style={[styles.button, { backgroundColor: "#ff6961" }]}
-                    onPress={() => handleLeaveClub(userInfo.bookClub)}
-                >
-                    <Text style={styles.buttonText}>Leave Club</Text>
-                </TouchableOpacity>
+                <View style={styles.cardCotainer}>
+                    <Text style={styles.clubText}>You are in: {userInfo.bookClub}</Text>
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: "#ff6961" }]}
+                        onPress={() => handleLeaveClub(userInfo.bookClub)}
+                    >
+                        <Text style={styles.buttonText}>Leave Club</Text>
+                    </TouchableOpacity>
+                </View>
                 </>
             ) : (
                 <>
@@ -293,9 +342,26 @@ export default function UserProfileScreen() {
 
         {/* FAVORITE BOOKS CARD */}
         <View style={styles.card}>
-            <Text style={styles.cardTitle}>FAVORITE BOOKS</Text>
-            <View style={styles.cardContent}></View>
+        <Text style={styles.cardTitle}>FAVORITE BOOKS</Text>
+
+        <FlatList
+            data={userInfo.readingLists.favorites} 
+            horizontal
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+            <View style={styles.bookItem}>
+                <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+                <Text style={styles.bookTitle}>{item.title}</Text>
+            </View>
+            )}
+            ListEmptyComponent={
+            <Text style={styles.empty}>No favorite books yet.</Text>
+            }
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 5 }}
+        />
         </View>
+
 
         {/* EDIT USERNAME MODAL */}
         <Modal visible={isModalVisible} animationType="slide" transparent={true}>
@@ -326,8 +392,28 @@ export default function UserProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingTop: 40, alignItems: "center" },
-  profileSection: { flexDirection: "row", alignItems: "center", marginBottom: 20, width: "90%" },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "90%",
+    marginBottom: 15,
+  },
+  cardContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#f0f0f0", // light gray background to make cards pop
+    paddingTop: 40,
+    alignItems: "center",
+  },
+  profileSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    width: "90%",
+  },
   profileImage: { width: 80, height: 80, borderRadius: 10, marginRight: 15 },
   userInfo: { flexShrink: 1 },
   username: { fontWeight: "700", fontSize: 16 },
@@ -342,19 +428,55 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
+
+  // Card style for shelves
   card: {
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#fff",
     width: "90%",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3, // Android shadow
   },
-  cardTitle: { fontWeight: "700", marginBottom: 6 },
-  cardContent: { backgroundColor: "#c8cbf7", borderRadius: 6, padding: 10 },
+  cardTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  cardContent: {
+    paddingVertical: 5,
+  },
+
+  // Horizontal book item
+  bookItem: {
+    marginRight: 10,
+    alignItems: "center",
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+    padding: 5,
+  },
+  thumbnail: {
+    width: 80,
+    height: 120,
+    borderRadius: 6,
+    backgroundColor: "#ddd",
+  },
+  bookTitle: {
+    fontSize: 12,
+    width: 80,
+    textAlign: "center",
+    marginTop: 5,
+  },
+  empty: {
+    color: "#777",
+    fontStyle: "italic",
+    paddingVertical: 10,
+  },
+
   clubCard: {
     backgroundColor: "#fff",
     borderRadius: 6,
@@ -364,6 +486,7 @@ const styles = StyleSheet.create({
   clubName: { fontWeight: "700", fontSize: 14 },
   clubDesc: { fontSize: 12, color: "#555" },
   clubText: { marginBottom: 10, fontSize: 13, color: "#333" },
+
   button: {
     alignSelf: "flex-start",
     paddingVertical: 6,
@@ -374,7 +497,12 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "600" },
 
   progressBar: { height: 10, borderRadius: 5, marginBottom: 5 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalContent: { backgroundColor: "#fff", width: "85%", borderRadius: 10, padding: 20, elevation: 5 },
   modalBox: {
     backgroundColor: "#fff",
@@ -392,3 +520,4 @@ const styles = StyleSheet.create({
   cancelText: { color: "#333", fontWeight: "600" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
+

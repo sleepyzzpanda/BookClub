@@ -8,20 +8,30 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { db } from "../utils/firebase-config";
+import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  const auth = getAuth();
+  const user = auth.currentUser;
 
   const handleSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
     try {
       const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}`
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+          query
+        )}`
       );
       const data = await response.json();
       setResults(data.items || []);
@@ -29,6 +39,31 @@ export default function SearchScreen() {
       console.error("Error fetching books:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add book to Firestore list
+  const addToList = async (book, listName) => {
+    try {
+      const userRef = doc(db, "users", user.uid);
+
+      const cleanedBook = {
+        id: book.id,
+        title: book.volumeInfo.title || "Untitled",
+        authors: book.volumeInfo.authors || [],
+        thumbnail:
+          book.volumeInfo.imageLinks?.thumbnail ||
+          "https://via.placeholder.com/120x160?text=No+Image",
+      };
+
+      await updateDoc(userRef, {
+        [`readingLists.${listName}`]: arrayUnion(cleanedBook),
+      });
+
+      Alert.alert("Added!", `Book added to "${listName}"`);
+    } catch (e) {
+      console.error("Error adding to list:", e);
+      Alert.alert("Error", "Could not add book to list.");
     }
   };
 
@@ -66,13 +101,7 @@ export default function SearchScreen() {
                   RESULTS FOR “{query.toUpperCase()}”
                 </Text>
 
-                {/* Book Info Card */}
-                <TouchableOpacity style={styles.infoButton}>
-                  <Text style={styles.infoButtonText}>
-                    SEE FULL BOOK INFORMATION →
-                  </Text>
-                </TouchableOpacity>
-
+                {/* Book Info */}
                 <View style={styles.bookContainer}>
                   <Image
                     source={{
@@ -94,12 +123,63 @@ export default function SearchScreen() {
                   </View>
                 </View>
 
+                {/* ADD TO LIST */}
                 <View style={styles.addSection}>
                   <Text style={styles.addLabel}>ADD TO LIST:</Text>
-                  <TouchableOpacity style={styles.dropdown}>
-                    <Text style={styles.dropdownText}>WANT TO READ ▼</Text>
+
+                  <TouchableOpacity
+                    style={styles.dropdown}
+                    onPress={() =>
+                      setOpenDropdown(openDropdown === item.id ? null : item.id)
+                    }
+                  >
+                    <Text style={styles.dropdownText}>SELECT LIST ▼</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Dropdown Menu */}
+                {openDropdown === item.id && (
+                  <View style={styles.dropdownMenu}>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        addToList(item, "favorites");
+                        setOpenDropdown(null);
+                      }}
+                    >
+                      <Text style={styles.dropdownOption}>Favorites</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        addToList(item, "wantToRead");
+                        setOpenDropdown(null);
+                      }}
+                    >
+                      <Text style={styles.dropdownOption}>Want to Read</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        addToList(item, "currentlyReading");
+                        setOpenDropdown(null);
+                      }}
+                    >
+                      <Text style={styles.dropdownOption}>Currently Reading</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        addToList(item, "read");
+                        setOpenDropdown(null);
+                      }}
+                    >
+                      <Text style={styles.dropdownOption}>Read</Text>
+                    </TouchableOpacity>
+
+                  </View>
+                )}
+
               </View>
             );
           }}
@@ -110,104 +190,55 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 15,
-    paddingTop: 50,
-  },
-  header: {
-    fontSize: 18,
-    color: "#444",
-    fontWeight: "600",
-    marginBottom: 10,
-  },
+  container: { flex: 1, backgroundColor: "#fff", padding: 15, paddingTop: 50 },
+  header: { fontSize: 18, fontWeight: "600", marginBottom: 10, color: "#444" },
   searchBar: {
     flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#e6e6e6",
     borderRadius: 10,
     paddingHorizontal: 10,
     marginBottom: 15,
+    alignItems: "center",
   },
-  input: {
-    flex: 1,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: "#000",
-  },
-  iconButton: {
-    padding: 6,
-  },
+  input: { flex: 1, paddingVertical: 10, fontSize: 14, color: "#000" },
+  iconButton: { padding: 6 },
   resultCard: {
     backgroundColor: "#f9f9f9",
     borderRadius: 10,
     padding: 15,
     marginBottom: 25,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
     elevation: 3,
   },
-  resultTitle: {
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  infoButton: {
-    backgroundColor: "#b8c8c0",
-    borderRadius: 5,
-    padding: 8,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  infoButtonText: {
-    fontWeight: "bold",
-    color: "#1a1a1a",
-  },
+  resultTitle: { fontWeight: "600", textAlign: "center", marginBottom: 10 },
   bookContainer: {
     flexDirection: "row",
     backgroundColor: "#e0e5ff",
-    borderRadius: 10,
     padding: 10,
+    borderRadius: 10,
   },
-  bookImage: {
-    width: 90,
-    height: 130,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  bookDetails: {
-    flex: 1,
-  },
-  bookTitle: {
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  bookDesc: {
-    fontSize: 12,
-    color: "#333",
-  },
-  addSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    marginTop: 10,
-  },
-  addLabel: {
-    fontWeight: "bold",
-    fontSize: 13,
-  },
+  bookImage: { width: 90, height: 130, borderRadius: 5, marginRight: 10 },
+  bookDetails: { flex: 1 },
+  bookTitle: { fontWeight: "bold", marginBottom: 6 },
+  bookDesc: { fontSize: 12, color: "#333" },
+  addSection: { marginTop: 10, flexDirection: "row", alignItems: "center" },
+  addLabel: { fontWeight: "bold", fontSize: 13 },
   dropdown: {
+    marginLeft: 10,
     backgroundColor: "#b8c8c0",
-    borderRadius: 5,
-    paddingVertical: 6,
     paddingHorizontal: 10,
-    marginLeft: 8,
+    paddingVertical: 6,
+    borderRadius: 5,
   },
-  dropdownText: {
-    color: "#fff",
-    fontWeight: "bold",
+  dropdownText: { color: "#fff", fontWeight: "bold" },
+  dropdownMenu: {
+    backgroundColor: "#ddd",
+    marginTop: 8,
+    borderRadius: 6,
+    padding: 8,
+  },
+  dropdownOption: {
+    paddingVertical: 6,
+    fontWeight: "600",
+    color: "#333",
   },
 });

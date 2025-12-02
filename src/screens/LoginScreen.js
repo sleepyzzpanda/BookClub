@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const handleSignUp = async () => {
     try {
       setLoading(true);
+
       const userCredential = await createUserWithEmailAndPassword(
         firebase_auth,
         email.trim(),
@@ -21,13 +22,21 @@ export default function LoginScreen() {
 
       const user = userCredential.user;
 
-      // Save user info to Firestore
+      // Create Firestore user document with reading lists
       await setDoc(doc(db, "users", user.uid), {
         username: email.split("@")[0],
-        booksRead: "0",
-        bookshelves: "0",
+        booksRead: 0,
+        bookshelves: 0,
         bookClub: null,
-        recommended: "0",
+        recommended: 0,
+
+        // Auto-generated reading lists
+        readingLists: {
+          read: [],
+          wantToRead: [],
+          currentlyReading: [],
+          favorites: [],
+        }
       });
 
       Alert.alert("User registered successfully!");
@@ -38,6 +47,7 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
 
   // SIGN IN
   const handleSignIn = async () => {

@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback} from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -47,25 +49,34 @@ export default function HomeScreen() {
         }
       } catch (e) {
         console.error("Error fetching user info:", e);
+      } finally {
+        setLoading(false); 
       }
     };
     fetchUser();
   }, []);
 
   // listen for posts in user's book club
-  useEffect(() => {
-    if (!userClub) return;
-    const q = query(
-      collection(db, "posts"),
-      where("clubId", "==", userClub),
-      orderBy("createdAt", "desc")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, [userClub]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!userClub) return;
+
+      const q = query(
+        collection(db, "posts"),
+        where("clubId", "==", userClub),
+        orderBy("createdAt", "desc")
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setLoading(false);
+      });
+
+      // Cleanup when screen is unfocused
+      return () => unsubscribe();
+    }, [userClub])
+  );
+
 
   // pick image from gallery
   const pickImage = async () => {
@@ -154,68 +165,71 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Post Input */}
-      <View style={styles.postBox}>
-        <TextInput
-          placeholder="Share something with your club..."
-          value={newPostText}
-          onChangeText={setNewPostText}
-          style={styles.input}
-          multiline
-        />
-        {image && <Image source={{ uri: image }} style={styles.preview} />}
-        <View style={styles.postButtons}>
-          <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-            <Text>🖼️</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Post Input */}
+        <View style={styles.postBox}>
+          <TextInput
+            placeholder="Share something with your club..."
+            value={newPostText}
+            onChangeText={setNewPostText}
+            style={styles.input}
+            multiline
+          />
+          {image && <Image source={{ uri: image }} style={styles.preview} />}
+          <View style={styles.postButtons}>
+            <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+              <Text>🖼️</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
-            <Text>📸</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+              <Text>📸</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.postButton}
-            onPress={handlePost}
-            disabled={uploading}
-          >
-            <Text style={styles.postText}>
-              {uploading ? "Posting..." : "Post"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Feed */}
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.postCard}>
-            <Text style={styles.username}>{item.username}</Text>
-            <Text style={styles.postContent}>{item.text}</Text>
-
-            {/* Render Base64 image if exists */}
-            {item.imageBase64 && (
-              <Image
-                source={{ uri: item.imageBase64 }}
-                style={styles.postImage}
-              />
-            )}
-
-            <Text style={styles.timestamp}>
-              {item.createdAt?.toDate
-                ? new Date(item.createdAt.toDate()).toLocaleString()
-                : ""}
-            </Text>
+            <TouchableOpacity
+              style={styles.postButton}
+              onPress={handlePost}
+              disabled={uploading}
+            >
+              <Text style={styles.postText}>
+                {uploading ? "Posting..." : "Post"}
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
-      />
-    </View>
+        </View>
+
+        {/* Feed */}
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.postCard}>
+              <Text style={styles.username}>{item.username}</Text>
+              <Text style={styles.postContent}>{item.text}</Text>
+
+              {/* Render Base64 image if exists */}
+              {item.imageBase64 && (
+                <Image
+                  source={{ uri: item.imageBase64 }}
+                  style={styles.postImage}
+                />
+              )}
+
+              <Text style={styles.timestamp}>
+                {item.createdAt?.toDate
+                  ? new Date(item.createdAt.toDate()).toLocaleString()
+                  : ""}
+              </Text>
+            </View>
+          )}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#fff"},
   container: { flex: 1, backgroundColor: "#fff", padding: 15 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   postBox: {
